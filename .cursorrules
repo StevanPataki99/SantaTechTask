@@ -1,0 +1,102 @@
+# Cursor Rules for Backend Template
+
+## Project Overview
+
+This is a NestJS 11 application within an Nx Monorepo.
+
+- Main Application: `backend-template`
+- Entry Point: `apps/backend-template/src/main.ts`
+
+## Technology Stack
+
+- **Framework**: NestJS 11
+- **Language**: TypeScript
+- **Monorepo Tool**: Nx
+- **Documentation**: Swagger (@nestjs/swagger)
+
+## Architecture: DDD (Domain-Driven Design)
+
+Follow Eric Evans' DDD principles with clear layer separation.
+
+### Layers
+
+1. **Presentation**: Controllers, DTOs (HTTP interaction).
+2. **Application**: Application Services (Orchestration only, NO business logic).
+3. **Domain**: Aggregates, Entities, Value Objects, Domain Services (Business Rules).
+4. **Infrastructure**: Repositories, Adapters, Mappers (Persistence/External).
+
+### Mapping Boundaries
+
+Mapping between layers happens at specific boundaries:
+
+- **Controller (Presentation ↔ Application)**: DTOs ↔ primitives/commands
+- **Response DTO**: Aggregate ↔ API response (via `fromAggregate()`)
+- **Infrastructure (Domain ↔ Persistence)**: Aggregate ↔ database record (via Mapper)
+
+**Important**: Domain layer works ONLY with Aggregates. DTOs never enter the domain.
+
+### Rule of Thumb
+
+- **Aggregates**: Encapsulation of state and behavior. ALL state change logic MUST reside here.
+- **Application Services**: Orchestration only. Coordinates calls to repositories and domain.
+- **Domain Services**: Stateless logic that involves multiple aggregates (rare).
+- **Controllers**: Request/response handling and DTO mapping only.
+
+## Development Conventions
+
+### Code Structure
+
+- **Feature Modules**: Organize by feature/domain (e.g., `users`, `orders`).
+- **File Types**:
+  - `*.controller.ts`: Presentation layer.
+  - `*.application-service.ts`: Application layer (orchestration).
+  - `*.entity.ts`: Domain Aggregates (business logic).
+  - `*.repository.interface.ts`: Domain repository contracts.
+  - `*.repository.ts`: Infrastructure implementations.
+  - `*.mapper.ts`: Infrastructure mappers (aggregate ↔ persistence).
+  - `*.module.ts`: Dependency Injection.
+  - `*.dto.ts`: Data Transfer Objects (presentation layer).
+
+### Folder Structure Per Module
+
+```
+user/
+├── application/
+│   ├── user.application-service.ts      # Orchestration
+│   └── user.application-service.spec.ts
+├── domain/
+│   ├── user.entity.ts                   # Aggregate Root (business logic)
+│   ├── user.entity.spec.ts
+│   └── user.repository.interface.ts     # Repository contract
+├── infrastructure/
+│   ├── user.repository.ts               # Prisma implementation
+│   ├── user.mapper.ts                   # Aggregate ↔ Persistence
+│   └── user.schema.ts                   # (optional) Prisma types
+├── dto/
+│   ├── create-user.dto.ts               # Input DTO
+│   └── user-response.dto.ts             # Output DTO (with fromAggregate)
+├── user.controller.ts                   # Presentation
+├── user.controller.spec.ts
+└── user.module.ts
+```
+
+### Swagger Documentation
+
+- **Mandatory**: All controllers and endpoints MUST have Swagger decorators.
+- **Decorators**: Use `@ApiTags`, `@ApiOperation`, `@ApiResponse`, `@ApiProperty`.
+- **Location**: Add decorators directly to controller methods and DTO properties.
+
+### Nx Commands
+
+- Use `nx` commands for all tasks.
+- Start: `npm start` (aliases `nx serve backend-template`)
+- Build: `npm run build`
+- Test: `npm test`
+- E2E: `npm run e2e`
+- Lint: `npm run lint`
+
+### General Rules
+
+- Prefer absolute imports where possible or consistent relative imports.
+- Keep `main.ts` clean; only bootstrap logic and global middleware.
+- Always update `package.json` scripts if adding new common tasks.
