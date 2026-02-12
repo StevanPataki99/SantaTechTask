@@ -16,3 +16,13 @@
   - System as i mentioned erlier was created so that it will be flexible for each app user to be able to be member of multiple orgs with different roles.
   - I also added indexes for specific fields to optimize specific repository queries that we have on members and organizations.
   - I added orgId on sessions so we can check for which org the user has session id to know which org data he can access or update.
+4. Adding org and member modules
+ - Update the prisma shcema based on the plan mentioned in section 3. to comply with better auth organization plugin
+ - Added module for Organizations (Based on better auth organization extension ) with basic api and all the necesary files, that comply with the current setup and layer split.
+ - Added module for Members (Based on better auth organization extension ) with basic api and all the necesary files, that comply with the current setup and layer split.
+ - Added RoleGuards that checks user's session orgId and checks if it mathces with desierd org api that he wants to use it also checks if he is a member of that org and also if api is guarded by role access it checks if he has role that he needs to access that api endpoint
+ 5. Song, Pitch, SongPitch db model planning
+ - Add models for song and pitch focus on each model to have all the necesary data.
+ - Add other supporting models lik Tag, PitchTag, PitchTargetArtist.
+ - Try all models to be normilised as possible and to be scoped with orgId so that it is specified for each org.
+ - Add all the necesary indexes fro optimisations and relations.
