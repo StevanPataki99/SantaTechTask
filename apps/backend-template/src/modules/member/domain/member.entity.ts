@@ -103,6 +103,14 @@ export class Member {
   }
 
   changeType(newType: MemberType): void {
+    if (this._role === 'owner') {
+      throw new Error('Cannot change the type of an owner. Only the owner can change their own type.');
+    }
+    this._type = newType;
+    this._updatedAt = new Date();
+  }
+
+  changeOwnType(newType: MemberType): void {
     this._type = newType;
     this._updatedAt = new Date();
   }

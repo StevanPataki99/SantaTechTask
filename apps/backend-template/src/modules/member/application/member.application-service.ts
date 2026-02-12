@@ -1,5 +1,6 @@
 import {
   ConflictException,
+  ForbiddenException,
   Inject,
   Injectable,
   NotFoundException,
@@ -74,6 +75,7 @@ export class MemberApplicationService {
 
   async updateMember(
     id: string,
+    requestingUserId: string,
     role?: string,
     type?: string,
   ): Promise<Member> {
@@ -82,11 +84,20 @@ export class MemberApplicationService {
       throw new NotFoundException(`Member with ID ${id} not found`);
     }
 
+    // Owner can only be modified by themselves
+    if (member.isOwner() && member.userId !== requestingUserId) {
+      throw new ForbiddenException('Only the owner can modify their own membership');
+    }
+
     if (role) {
       member.changeRole(role as MemberRole);
     }
     if (type) {
-      member.changeType(type as MemberType);
+      if (member.isOwner()) {
+        member.changeOwnType(type as MemberType);
+      } else {
+        member.changeType(type as MemberType);
+      }
     }
 
     return this.memberRepository.save(member);

@@ -9,7 +9,11 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { OrgRoles } from '../../common/decorators/org-roles.decorator';
+import { OrgMemberGuard } from '../../common/guards/org-member.guard';
 import { SessionGuard } from '../../common/guards/session.guard';
+import { extractUserId } from '../../common/utils/extract-user-id';
 import { MemberApplicationService } from './application';
 import { AddMemberDto } from './dto/add-member.dto';
 import { UpdateMemberDto } from './dto/update-member.dto';
@@ -17,20 +21,24 @@ import { MemberResponseDto } from './dto/member-response.dto';
 
 @ApiTags('members')
 @Controller('organizations/:orgId/members')
-@UseGuards(SessionGuard)
+@UseGuards(SessionGuard, OrgMemberGuard)
 export class MemberController {
   constructor(
     private readonly memberAppService: MemberApplicationService,
   ) {}
 
   @Post()
-  @ApiOperation({ summary: 'Add a member to an organization' })
+  @OrgRoles('owner', 'admin')
+  @ApiOperation({
+    summary: 'Add a member to an organization (owner/admin only)',
+  })
   @ApiResponse({
     status: 201,
     description: 'The member has been successfully added.',
     type: MemberResponseDto,
   })
   @ApiResponse({ status: 400, description: 'Bad Request.' })
+  @ApiResponse({ status: 403, description: 'Insufficient permissions.' })
   @ApiResponse({ status: 409, description: 'User is already a member.' })
   async addMember(
     @Param('orgId') orgId: string,
@@ -76,19 +84,26 @@ export class MemberController {
   }
 
   @Patch(':memberId')
-  @ApiOperation({ summary: 'Update a member (role or type)' })
+  @OrgRoles('owner', 'admin')
+  @ApiOperation({
+    summary: 'Update a member role or type (owner/admin only)',
+  })
   @ApiResponse({
     status: 200,
     description: 'The member has been successfully updated.',
     type: MemberResponseDto,
   })
+  @ApiResponse({ status: 403, description: 'Insufficient permissions.' })
   @ApiResponse({ status: 404, description: 'Member not found.' })
   async updateMember(
     @Param('memberId') memberId: string,
     @Body() dto: UpdateMemberDto,
+    @CurrentUser() user: unknown,
   ): Promise<MemberResponseDto> {
+    const userId = extractUserId(user);
     const member = await this.memberAppService.updateMember(
       memberId,
+      userId,
       dto.role,
       dto.type,
     );
@@ -96,11 +111,15 @@ export class MemberController {
   }
 
   @Delete(':memberId')
-  @ApiOperation({ summary: 'Remove a member from an organization' })
+  @OrgRoles('owner', 'admin')
+  @ApiOperation({
+    summary: 'Remove a member from an organization (owner/admin only)',
+  })
   @ApiResponse({
     status: 200,
     description: 'The member has been successfully removed.',
   })
+  @ApiResponse({ status: 403, description: 'Insufficient permissions.' })
   @ApiResponse({ status: 404, description: 'Member not found.' })
   async removeMember(@Param('memberId') memberId: string): Promise<void> {
     await this.memberAppService.removeMember(memberId);

@@ -6,12 +6,14 @@ import {
   Param,
   Patch,
   Post,
-  UnauthorizedException,
   UseGuards,
 } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { OrgRoles } from '../../common/decorators/org-roles.decorator';
+import { OrgMemberGuard } from '../../common/guards/org-member.guard';
 import { SessionGuard } from '../../common/guards/session.guard';
+import { extractUserId } from '../../common/utils/extract-user-id';
 import { OrganizationApplicationService } from './application';
 import { CreateOrganizationDto } from './dto/create-organization.dto';
 import { UpdateOrganizationDto } from './dto/update-organization.dto';
@@ -40,7 +42,7 @@ export class OrganizationController {
     @Body() dto: CreateOrganizationDto,
     @CurrentUser() user: unknown,
   ): Promise<OrganizationResponseDto> {
-    const userId = this.extractUserId(user);
+    const userId = extractUserId(user);
     const organization = await this.organizationAppService.createOrganization(
       dto.name,
       dto.slug,
@@ -61,7 +63,7 @@ export class OrganizationController {
   async findMyOrganizations(
     @CurrentUser() user: unknown,
   ): Promise<OrganizationResponseDto[]> {
-    const userId = this.extractUserId(user);
+    const userId = extractUserId(user);
     const organizations =
       await this.organizationAppService.getOrganizationsForUser(userId);
     return organizations.map((org) =>
@@ -70,12 +72,14 @@ export class OrganizationController {
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Get an organization by ID' })
+  @UseGuards(OrgMemberGuard)
+  @ApiOperation({ summary: 'Get an organization by ID (members only)' })
   @ApiResponse({
     status: 200,
     description: 'Return the organization.',
     type: OrganizationResponseDto,
   })
+  @ApiResponse({ status: 403, description: 'Not a member / wrong active org.' })
   @ApiResponse({ status: 404, description: 'Organization not found.' })
   async findOne(@Param('id') id: string): Promise<OrganizationResponseDto> {
     const organization =
@@ -84,12 +88,15 @@ export class OrganizationController {
   }
 
   @Patch(':id')
-  @ApiOperation({ summary: 'Update an organization' })
+  @UseGuards(OrgMemberGuard)
+  @OrgRoles('owner', 'admin')
+  @ApiOperation({ summary: 'Update an organization (owner/admin only)' })
   @ApiResponse({
     status: 200,
     description: 'The organization has been successfully updated.',
     type: OrganizationResponseDto,
   })
+  @ApiResponse({ status: 403, description: 'Insufficient permissions.' })
   @ApiResponse({ status: 404, description: 'Organization not found.' })
   @ApiResponse({ status: 409, description: 'Slug already taken.' })
   async update(
@@ -108,25 +115,16 @@ export class OrganizationController {
   }
 
   @Delete(':id')
-  @ApiOperation({ summary: 'Delete an organization' })
+  @UseGuards(OrgMemberGuard)
+  @OrgRoles('owner')
+  @ApiOperation({ summary: 'Delete an organization (owner only)' })
   @ApiResponse({
     status: 200,
     description: 'The organization has been successfully deleted.',
   })
+  @ApiResponse({ status: 403, description: 'Insufficient permissions.' })
   @ApiResponse({ status: 404, description: 'Organization not found.' })
   async remove(@Param('id') id: string): Promise<void> {
     await this.organizationAppService.deleteOrganization(id);
-  }
-
-  private extractUserId(user: unknown): string {
-    if (
-      !user ||
-      typeof user !== 'object' ||
-      !('id' in user) ||
-      typeof (user as { id: unknown }).id !== 'string'
-    ) {
-      throw new UnauthorizedException('Invalid user context');
-    }
-    return (user as { id: string }).id;
   }
 }
