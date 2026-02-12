@@ -23,6 +23,8 @@ model User {
   sessions      Session[]
   accounts      Account[]
   members       Member[]
+  uploadedSongs Song[]
+  createdPitches Pitch[]
 
   @@map("user")
 }
@@ -83,6 +85,9 @@ model Organization {
   updatedAt DateTime @updatedAt
 
   members   Member[]
+  songs     Song[]
+  pitches   Pitch[]
+  tags      Tag[]
 
   @@map("organization")
 }
@@ -120,4 +125,93 @@ model Invitation {
   @@index([organizationId])
   @@index([email])
   @@map("invitation")
+}
+
+model Song {
+  id             String   @id @default(cuid())
+  organizationId String
+  uploaderId     String
+
+  title          String
+  artist         String?
+  durationSec    Int?
+
+  filePath       String
+  fileName       String
+  mimeType       String
+  sizeBytes      BigInt
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  uploader       User         @relation(fields: [uploaderId], references: [id], onDelete: Restrict)
+
+  pitches        Pitch[]
+
+  @@index([organizationId, createdAt])
+  @@index([uploaderId, createdAt])
+  @@map("song")
+}
+
+model Pitch {
+  id             String   @id @default(cuid())
+  organizationId String
+  songId         String
+  createdById    String
+
+  description    String?
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  song           Song         @relation(fields: [songId], references: [id], onDelete: Cascade)
+  createdBy      User         @relation(fields: [createdById], references: [id], onDelete: Restrict)
+
+  tags           PitchTag[]
+  targetArtists  PitchTargetArtist[]
+
+  @@index([organizationId, createdAt])
+  @@index([songId])
+  @@index([createdById, createdAt])
+  @@map("pitch")
+}
+
+model Tag {
+  id             String @id @default(cuid())
+  organizationId String
+  name           String
+
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  pitches        PitchTag[]
+
+  @@unique([organizationId, name])
+  @@index([organizationId])
+  @@map("tag")
+}
+
+model PitchTag {
+  pitchId String
+  tagId   String
+
+  pitch   Pitch @relation(fields: [pitchId], references: [id], onDelete: Cascade)
+  tag     Tag   @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([pitchId, tagId])
+  @@index([tagId])
+  @@map("pitch_tag")
+}
+
+model PitchTargetArtist {
+  id      String @id @default(cuid())
+  pitchId String
+  name    String
+
+  pitch   Pitch @relation(fields: [pitchId], references: [id], onDelete: Cascade)
+
+  @@unique([pitchId, name])
+  @@index([pitchId])
+  @@index([name])
+  @@map("pitch_target_artist")
 }
