@@ -10,7 +10,10 @@ import { LoggerModule } from 'nestjs-pino';
 import { MemberModule } from '../modules/member/member.module';
 import { Module } from '@nestjs/common';
 import { OrganizationModule } from '../modules/organization/organization.module';
+import { PitchModule } from '../modules/pitch/pitch.module';
 import { ResponseInterceptor } from '../common/interceptors/response.interceptor';
+import { SongModule } from '../modules/song/song.module';
+import { TagModule } from '../modules/tag/tag.module';
 import { UserModule } from '../modules/user/user.module';
 import appConfig from '../config/app.config';
 import { randomUUID } from 'crypto';
@@ -54,6 +57,9 @@ import { validate } from '../config/env.schema';
     UserModule,
     MemberModule,
     OrganizationModule,
+    SongModule,
+    PitchModule,
+    TagModule,
     HealthModule,
   ],
   controllers: [],
