@@ -19,9 +19,11 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { OrgMemberTypes } from '../../common/decorators/org-member-types.decorator';
 import { OrgMemberGuard } from '../../common/guards/org-member.guard';
 import { SessionGuard } from '../../common/guards/session.guard';
 import { extractUserId } from '../../common/utils/extract-user-id';
+import { MemberType } from '../member/domain/member.entity';
 import { SongApplicationService } from './application';
 import { CreateSongDto } from './dto/create-song.dto';
 import { UpdateSongDto } from './dto/update-song.dto';
@@ -36,10 +38,11 @@ export class SongController {
   ) {}
 
   @Post()
+  @OrgMemberTypes(MemberType.SONGWRITER)
   @UseInterceptors(FileInterceptor('file'))
   @ApiConsumes('multipart/form-data')
   @ApiOperation({
-    summary: 'Upload a new song to the organization',
+    summary: 'Upload a new song (songwriter only)',
   })
   @ApiResponse({
     status: 201,
@@ -56,7 +59,6 @@ export class SongController {
   ): Promise<SongResponseDto> {
     const userId = extractUserId(user);
 
-    // Build the relative file path for storage
     const filePath = `uploads/org/${orgId}/songs/${file.originalname}`;
 
     const song = await this.songAppService.createSong(
@@ -73,8 +75,72 @@ export class SongController {
     return SongResponseDto.fromAggregate(song);
   }
 
+  @Get('my')
+  @OrgMemberTypes(MemberType.SONGWRITER)
+  @ApiOperation({ summary: 'List my uploaded songs (songwriter only)' })
+  @ApiResponse({
+    status: 200,
+    description: 'List of songs uploaded by the current user.',
+    type: [SongResponseDto],
+  })
+  async listMySongs(
+    @Param('orgId') orgId: string,
+    @CurrentUser() user: unknown,
+  ): Promise<SongResponseDto[]> {
+    const userId = extractUserId(user);
+    const songs = await this.songAppService.getSongsByUploader(userId, orgId);
+    return songs.map((s) => SongResponseDto.fromAggregate(s));
+  }
+
+  @Patch(':songId')
+  @OrgMemberTypes(MemberType.SONGWRITER)
+  @ApiOperation({ summary: 'Update own song metadata (songwriter only)' })
+  @ApiResponse({
+    status: 200,
+    description: 'The song has been successfully updated.',
+    type: SongResponseDto,
+  })
+  @ApiResponse({ status: 403, description: 'Not the owner of this song.' })
+  @ApiResponse({ status: 404, description: 'Song not found.' })
+  async updateSong(
+    @Param('orgId') orgId: string,
+    @Param('songId') songId: string,
+    @Body() dto: UpdateSongDto,
+    @CurrentUser() user: unknown,
+  ): Promise<SongResponseDto> {
+    const userId = extractUserId(user);
+    const song = await this.songAppService.updateOwnSong(
+      songId,
+      orgId,
+      userId,
+      dto.title,
+      dto.artist,
+      dto.durationSec,
+    );
+    return SongResponseDto.fromAggregate(song);
+  }
+
+  @Delete(':songId')
+  @OrgMemberTypes(MemberType.SONGWRITER)
+  @ApiOperation({ summary: 'Delete own song (songwriter only)' })
+  @ApiResponse({
+    status: 200,
+    description: 'The song has been successfully deleted.',
+  })
+  @ApiResponse({ status: 403, description: 'Not the owner of this song.' })
+  @ApiResponse({ status: 404, description: 'Song not found.' })
+  async deleteSong(
+    @Param('orgId') orgId: string,
+    @Param('songId') songId: string,
+    @CurrentUser() user: unknown,
+  ): Promise<void> {
+    const userId = extractUserId(user);
+    await this.songAppService.deleteOwnSong(songId, orgId, userId);
+  }
+
   @Get()
-  @ApiOperation({ summary: 'List all songs in the organization' })
+  @OrgMemberTypes(MemberType.MANAGER)
+  @ApiOperation({ summary: 'List all songs in the organization (manager only)' })
   @ApiResponse({
     status: 200,
     description: 'List of songs.',
@@ -88,7 +154,8 @@ export class SongController {
   }
 
   @Get(':songId')
-  @ApiOperation({ summary: 'Get a specific song' })
+  @OrgMemberTypes(MemberType.MANAGER)
+  @ApiOperation({ summary: 'Get a specific song (manager only)' })
   @ApiResponse({
     status: 200,
     description: 'Return the song.',
@@ -101,42 +168,5 @@ export class SongController {
   ): Promise<SongResponseDto> {
     const song = await this.songAppService.getSongById(songId, orgId);
     return SongResponseDto.fromAggregate(song);
-  }
-
-  @Patch(':songId')
-  @ApiOperation({ summary: 'Update song metadata' })
-  @ApiResponse({
-    status: 200,
-    description: 'The song has been successfully updated.',
-    type: SongResponseDto,
-  })
-  @ApiResponse({ status: 404, description: 'Song not found.' })
-  async updateSong(
-    @Param('orgId') orgId: string,
-    @Param('songId') songId: string,
-    @Body() dto: UpdateSongDto,
-  ): Promise<SongResponseDto> {
-    const song = await this.songAppService.updateSong(
-      songId,
-      orgId,
-      dto.title,
-      dto.artist,
-      dto.durationSec,
-    );
-    return SongResponseDto.fromAggregate(song);
-  }
-
-  @Delete(':songId')
-  @ApiOperation({ summary: 'Delete a song from the organization' })
-  @ApiResponse({
-    status: 200,
-    description: 'The song has been successfully deleted.',
-  })
-  @ApiResponse({ status: 404, description: 'Song not found.' })
-  async deleteSong(
-    @Param('orgId') orgId: string,
-    @Param('songId') songId: string,
-  ): Promise<void> {
-    await this.songAppService.deleteSong(songId, orgId);
   }
 }

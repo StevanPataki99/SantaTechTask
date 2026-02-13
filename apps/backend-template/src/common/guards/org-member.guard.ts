@@ -6,8 +6,12 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { PrismaService } from '../../database/prisma.service';
-import { MemberRole } from '../../modules/member/domain/member.entity';
+import {
+  MemberRole,
+  MemberType,
+} from '../../modules/member/domain/member.entity';
 import { ORG_ROLES_KEY } from '../decorators/org-roles.decorator';
+import { ORG_MEMBER_TYPES_KEY } from '../decorators/org-member-types.decorator';
 
 /**
  * Guard that enforces organization-level authorization.
@@ -18,6 +22,7 @@ import { ORG_ROLES_KEY } from '../decorators/org-roles.decorator';
  * 1. Session's activeOrganizationId matches the :orgId (or :id) route param.
  * 2. The authenticated user is a member of that organization.
  * 3. (Optional) The member's role matches the roles specified by @OrgRoles().
+ * 4. (Optional) The member's type matches the types specified by @OrgMemberTypes().
  *
  * On success, attaches the member record to `request.member`.
  */
@@ -78,7 +83,21 @@ export class OrgMemberGuard implements CanActivate {
     if (requiredRoles && requiredRoles.length > 0) {
       if (!requiredRoles.includes(member.role as MemberRole)) {
         throw new ForbiddenException(
-          `Requires one of: ${requiredRoles.join(', ')}`,
+          `Requires one of roles: ${requiredRoles.join(', ')}`,
+        );
+      }
+    }
+
+    // Check required member types if @OrgMemberTypes() decorator is present
+    const requiredTypes = this.reflector.getAllAndOverride<MemberType[]>(
+      ORG_MEMBER_TYPES_KEY,
+      [context.getHandler(), context.getClass()],
+    );
+
+    if (requiredTypes && requiredTypes.length > 0) {
+      if (!requiredTypes.includes(member.type as MemberType)) {
+        throw new ForbiddenException(
+          `Requires one of member types: ${requiredTypes.join(', ')}`,
         );
       }
     }

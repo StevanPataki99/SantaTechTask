@@ -10,9 +10,11 @@ import {
 } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { OrgMemberTypes } from '../../common/decorators/org-member-types.decorator';
 import { OrgMemberGuard } from '../../common/guards/org-member.guard';
 import { SessionGuard } from '../../common/guards/session.guard';
 import { extractUserId } from '../../common/utils/extract-user-id';
+import { MemberType } from '../member/domain/member.entity';
 import { PitchApplicationService } from './application';
 import { CreatePitchDto } from './dto/create-pitch.dto';
 import { UpdatePitchDto } from './dto/update-pitch.dto';
@@ -21,6 +23,7 @@ import { PitchResponseDto } from './dto/pitch-response.dto';
 @ApiTags('pitches')
 @Controller('organizations/:orgId/pitches')
 @UseGuards(SessionGuard, OrgMemberGuard)
+@OrgMemberTypes(MemberType.MANAGER)
 export class PitchController {
   constructor(
     private readonly pitchAppService: PitchApplicationService,

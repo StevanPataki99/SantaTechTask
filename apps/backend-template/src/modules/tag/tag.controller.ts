@@ -8,8 +8,10 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { OrgMemberTypes } from '../../common/decorators/org-member-types.decorator';
 import { OrgMemberGuard } from '../../common/guards/org-member.guard';
 import { SessionGuard } from '../../common/guards/session.guard';
+import { MemberType } from '../member/domain/member.entity';
 import { TagApplicationService } from './application';
 import { CreateTagDto } from './dto/create-tag.dto';
 import { TagResponseDto } from './dto/tag-response.dto';
@@ -17,6 +19,7 @@ import { TagResponseDto } from './dto/tag-response.dto';
 @ApiTags('tags')
 @Controller('organizations/:orgId/tags')
 @UseGuards(SessionGuard, OrgMemberGuard)
+@OrgMemberTypes(MemberType.MANAGER)
 export class TagController {
   constructor(
     private readonly tagAppService: TagApplicationService,

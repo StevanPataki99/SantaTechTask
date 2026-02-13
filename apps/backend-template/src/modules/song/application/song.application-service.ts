@@ -83,6 +83,29 @@ export class SongApplicationService {
     return this.songRepository.save(song);
   }
 
+  async updateOwnSong(
+    id: string,
+    organizationId: string,
+    requestingUserId: string,
+    title?: string,
+    artist?: string | null,
+    durationSec?: number | null,
+  ): Promise<Song> {
+    const song = await this.songRepository.findById(id);
+    if (!song) {
+      throw new NotFoundException(`Song with ID ${id} not found`);
+    }
+    if (song.organizationId !== organizationId) {
+      throw new ForbiddenException('Song does not belong to this organization');
+    }
+    if (song.uploaderId !== requestingUserId) {
+      throw new ForbiddenException('You can only update your own songs');
+    }
+
+    song.updateMetadata(title, artist, durationSec);
+    return this.songRepository.save(song);
+  }
+
   async deleteSong(id: string, organizationId: string): Promise<void> {
     const song = await this.songRepository.findById(id);
     if (!song) {
@@ -90,6 +113,24 @@ export class SongApplicationService {
     }
     if (song.organizationId !== organizationId) {
       throw new ForbiddenException('Song does not belong to this organization');
+    }
+    await this.songRepository.delete(id);
+  }
+
+  async deleteOwnSong(
+    id: string,
+    organizationId: string,
+    requestingUserId: string,
+  ): Promise<void> {
+    const song = await this.songRepository.findById(id);
+    if (!song) {
+      throw new NotFoundException(`Song with ID ${id} not found`);
+    }
+    if (song.organizationId !== organizationId) {
+      throw new ForbiddenException('Song does not belong to this organization');
+    }
+    if (song.uploaderId !== requestingUserId) {
+      throw new ForbiddenException('You can only delete your own songs');
     }
     await this.songRepository.delete(id);
   }
