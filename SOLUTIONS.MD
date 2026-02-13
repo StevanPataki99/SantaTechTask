@@ -21,8 +21,13 @@
  - Added module for Organizations (Based on better auth organization extension ) with basic api and all the necesary files, that comply with the current setup and layer split.
  - Added module for Members (Based on better auth organization extension ) with basic api and all the necesary files, that comply with the current setup and layer split.
  - Added RoleGuards that checks user's session orgId and checks if it mathces with desierd org api that he wants to use it also checks if he is a member of that org and also if api is guarded by role access it checks if he has role that he needs to access that api endpoint
- 5. Song, Pitch, SongPitch db model planning
+ 5. Song, Pitch, PitchTag, Tag, PitchTargetArtist db model planning
  - Add models for song and pitch focus on each model to have all the necesary data.
  - Add other supporting models lik Tag, PitchTag, PitchTargetArtist.
  - Try all models to be normilised as possible and to be scoped with orgId so that it is specified for each org.
  - Add all the necesary indexes fro optimisations and relations.
+ 6. Implement Song, Pitch, PitchTag, Tag, PitchTargetArtist modules for new logic
+ - Update the prisma shcema based on the plan mentioned in section 5.
+ - Add Song module for working with songs and uploading them make all the sections split in layers similar to the template
+ - Add Pitch module for creating song pitches and creating Tags and PitchTartgetArtists make all the sections split in layers similar to the template
+ - Extend the Role guard to check for manager and songwriter member roles to protect routes based on member type role.
